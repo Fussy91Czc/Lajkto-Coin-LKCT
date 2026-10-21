@@ -4,6 +4,14 @@ Official public transparency repository for **Lajkto Coin Technology (LKCT)**.
 
 LKCT is a CryptoNote-derived digital currency using RandomX proof of work. This repository publishes a deliberately reviewed subset of the LKCT consensus implementation so that network identity and monetary-policy changes can be inspected without publishing unrelated experimental or commercial service-layer work.
 
+## Node and API integration guides
+
+**Run your own LKCT mainnet node** and **integrate the lightweight public mining JSON API** using the [official English developer guide](https://lajkto.eu/lkct/developers.html).
+
+- [Run a full node: Linux & Windows](https://lajkto.eu/lkct/developers.html#node)
+- [Lightweight JSON API for mining directories](https://lajkto.eu/lkct/developers.html#api)
+- [Public compact statistics endpoint](https://lajkto.eu/pool/lkct-stats.php) (GET, 30-second cache)
+
 ## Public project links
 
 - Project and wallet downloads: https://lajkto.eu/lkct
