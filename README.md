@@ -30,6 +30,7 @@ Meet **Lajkto Fox**, the official LKCT community mascot. The fox represents the 
 - Project and wallet downloads: https://lajkto.eu/lkct
 - Mining pool: https://lajkto.eu/pool
 - Main website: https://lajkto.eu
+- Official Telegram channel: https://t.me/LajkToOfficial (@LajkToOfficial)
 
 Wallet builds are available for Windows, Linux and Android from the official project site.
 
