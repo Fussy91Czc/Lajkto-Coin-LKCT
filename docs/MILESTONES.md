@@ -42,3 +42,19 @@ These links point to **existing LKCT-hosted artifacts**, not GitHub-hosted binar
 | Android ARM64 | Beta 2 | [APK](https://lajkto.eu/lkct/downloads/LKCT-Wallet-Android-arm64-20260922-beta2.apk) | [SHA256](https://lajkto.eu/lkct/downloads/LKCT-Wallet-Android-arm64-20260922-beta2.apk.sha256) |
 
 Website: https://lajkto.eu/lkct/ · [Milestones](https://lajkto.eu/lkct/milestones.html) · [Updates](https://lajkto.eu/lkct/updates.html)
+
+## Additional dated milestones recovered from project history and correspondence
+
+| Date | Event | Evidence/status |
+| --- | --- | --- |
+| 2026-09-17 | Closed LKCT testnet passed deterministic genesis, 5 LKCT transfer, 2-node P2P, x86-64 and ARM64 tests | Project development log |
+| 2026-09-22 | Official Lajkto Coin Facebook page and public project announcement | Project conversation |
+| 2026-09-25 | International outreach to mining communities and cryptocurrency information services | Sent email correspondence; outreach only |
+| 2026-09-27 | Public GitHub repository published with consensus, monetary policy and genesis verification tools | GitHub/project history |
+| 2026-10-22 | External XMRig CPU miner test and public mining setup guide communicated internationally | Project email correspondence |
+| 2026-10-27 | MiningBoard confirms ABRS, XMR and LKCT sections on Lajkto Pool profile | MiningBoard reply |
+| 2026-10-31 | Trezor and hardware wallet providers contacted about LKCT support | Sent email correspondence; no integration confirmed |
+| 2026-10-31 | HiveOS/Hiveon contacted about official coin and pool support | Sent email correspondence; no integration confirmed |
+| 2026-11-01 | Keystone acknowledges receipt of hardware wallet feasibility inquiry | Automatic receipt only; no integration confirmed |
+
+**Editorial policy:** exact dates are based on the dated record identified; project achievements, outreach, automated acknowledgments and completed third-party integrations must not be conflated. MinerGate's exact date remains unverified.
