@@ -4,6 +4,19 @@ Official public transparency repository for **Lajkto Coin Technology (LKCT)**.
 
 LKCT is a CryptoNote-derived digital currency using RandomX proof of work. This repository publishes a deliberately reviewed subset of the LKCT consensus implementation so that network identity and monetary-policy changes can be inspected without publishing unrelated experimental or commercial service-layer work.
 
+
+## Lajkto Fox 🦊
+
+**What does the fox say? LAJKTO!**
+
+Meet **Lajkto Fox**, the official LKCT community mascot. The fox represents the playful side of the project alongside its technical documentation and independent RandomX CPU mining network.
+
+![Lajkto Fox, official LKCT community mascot](https://lajkto.eu/lkct/assets/lajkto-fox-blue.png)
+
+[Meet Lajkto Fox on the official website](https://lajkto.eu/lkct/#lajkto-fox)
+
+*The mascot is community artwork, not a promise of market value, returns or exchange listing.*
+
 ## Node and API integration guides
 
 **Run your own LKCT mainnet node** and **integrate the lightweight public mining JSON API** using the [official English developer guide](https://lajkto.eu/lkct/developers.html).
