@@ -63,6 +63,14 @@ The current LKCT consensus constants represented by this snapshot are:
 
 The source files in this repository are the authoritative basis for the implementation details of this published snapshot.
 
+## Planned v1.2 update — not active
+
+A coordinated update is being prepared for faster difficulty adjustment, voluntary fixed-term staking and a permanent security reward after exhaustion of the original mining allocation. **Block 100,000 is a conditional planning target**, approximately 10 December 2026 at the one-minute target interval; it is not a confirmed activation date.
+
+[Read the full English plan: what changes, why, timing and pool coordination](docs/lkct-policy-v1.2-plan.md).
+
+The 100-million supply limit and absence of tail emission listed above describe the current published consensus. The proposed additional staking reserve and subsequent security emission are **not active**. Implementation, audits, distribution lead time and VeinPool compatibility must be completed or confirmed before deployment.
+
 ## Publication boundary
 
 This is **not a dump of the entire internal development tree**.
