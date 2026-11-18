@@ -18,6 +18,7 @@ Stability, timestamp-manipulation and reorganization tests must be completed bef
 
 | Lock period | Total reward for the agreed term |
 |---|---:|
+| 10 days | 0.33% |
 | 30 days | 1% |
 | 90 days | 3% |
 | 180 days | 5% |
@@ -39,9 +40,9 @@ At most 300 million LKCT can be issued before this permanent emission is counted
 
 ## Planned activation
 
-The preparatory target is **block 100,000**. Based on the height checked on 17 November 2026 and an average of 60 seconds per block, this corresponded roughly to **10 December 2026**. The jointly confirmed height will be decisive; the calendar estimate can change with mining speed.
+The founder has committed to **block 100,000** as the fixed activation height. It is no longer a provisional candidate. Based on the height checked on 17 November 2026 and an average of 60 seconds per block, this corresponded roughly to **10 December 2026**. The block height is fixed; the calendar date remains an estimate dependent on mining speed.
 
-We plan at least 14 days to distribute the completed update before activation. If the lead time cannot be met, implementation and testing remain incomplete, or participant coordination cannot be confirmed, a later height will be selected before final deployment.
+The completed update is to be distributed at least 14 days and 20,160 nominal blocks before activation. Implementation, testing, audits and participant coordination are still incomplete. If this lead time is at risk, the founder must be informed promptly; block 100,000 will not be moved automatically. Changing the committed height requires a new explicit founder instruction and participant coordination.
 
 **The 0.75 LKCT reward will not automatically start at block 100,000.** It remains conditional on exhaustion of the original mining issuance.
 
@@ -53,4 +54,4 @@ VeinPool compatibility must be confirmed before deployment, and updates must be 
 
 The production network has not been changed by this update. Component tests for issuance accounting, database operations, deposit funding and signatures have passed. Full staking integration into the blockchain and wallets, network tests, audits and final deployment packages are not yet complete.
 
-This announcement describes a plan. It does not confirm that staking has launched or that the activation date is final. The final version, activation height and operator instructions will be published separately once preparation is complete.
+Activation height 100,000 is committed. This announcement does not confirm that staking is live, that VeinPool is ready, or that the final release has been deployed on production nodes. Final versions and operator instructions will be published after preparation; the current production software does not yet perform this transition.
