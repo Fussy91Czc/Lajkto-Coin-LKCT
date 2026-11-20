@@ -65,7 +65,7 @@ The source files in this repository are the authoritative basis for the implemen
 
 ## Planned v1.2 update — not active
 
-A coordinated update is being prepared for faster difficulty adjustment, voluntary fixed-term staking and a permanent security reward after exhaustion of the original mining allocation. **Block 100,000 is a conditional planning target**, approximately 10 December 2026 at the one-minute target interval; it is not a confirmed activation date.
+A coordinated update is being prepared for faster difficulty adjustment, voluntary fixed-term staking and a permanent security reward after exhaustion of the original mining allocation. **Block 100,000 is the committed activation height.** The calendar date depends on block production. Node and pool operators should install the final compatible release before that height once it is published.
 
 [Read the full English plan: what changes, why, timing and pool coordination](docs/lkct-policy-v1.2-plan.md).
 
