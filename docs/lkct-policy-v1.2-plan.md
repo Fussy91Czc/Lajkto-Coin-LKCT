@@ -42,7 +42,7 @@ At most 300 million LKCT can be issued before this permanent emission is counted
 
 The founder has committed to **block 100,000** as the fixed activation height. It is no longer a provisional candidate. Based on the height checked on 17 November 2026 and an average of 60 seconds per block, this corresponded roughly to **10 December 2026**. The block height is fixed; the calendar date remains an estimate dependent on mining speed.
 
-The completed update is to be distributed at least 14 days and 20,160 nominal blocks before activation. Implementation, testing, audits and participant coordination are still incomplete. If this lead time is at risk, the founder must be informed promptly; block 100,000 will not be moved automatically. Changing the committed height requires a new explicit founder instruction and participant coordination.
+On 20 November 2026 the founder set the distribution lead to at least 7 days and 10,080 nominal blocks before activation. The first automatic installation must start below RPC height 89,920. The installer also allows 15 minutes to complete the operation and uses recent block times to check the remaining time. Implementation, testing, audits and participant coordination are still incomplete. If this lead time is at risk, the founder must be informed promptly; block 100,000 will not be moved automatically. Changing the committed height requires a new explicit founder instruction and participant coordination.
 
 **The 0.75 LKCT reward will not automatically start at block 100,000.** It remains conditional on exhaustion of the original mining issuance.
 
