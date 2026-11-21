@@ -1,0 +1,70 @@
+name: Publish LKCT Wallet v1.2-rc5
+on:
+  push:
+    branches: ['wallet-release/v1.2-rc5']
+    paths: ['.github/workflows/lkct-wallet-rc5.yml']
+  workflow_dispatch:
+concurrency: lkct-wallet-v1-2-rc5
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.repository == 'Fussy91Czc/Lajkto-Coin-LKCT' && github.ref == 'refs/heads/wallet-release/v1.2-rc5'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: v1.2-wallet-rc5
+      DOWNLOADS: https://lajkto.eu/lkct/downloads
+      INDEX: LKCT-Wallet-v1.2-rc5-SHA256SUMS.txt
+    steps:
+      - name: Verify the founder signature and each artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir assets
+          cd assets
+          curl -fsS --retry 4 -O "$DOWNLOADS/$INDEX"
+          curl -fsS --retry 4 -O "$DOWNLOADS/$INDEX.sig"
+          echo "f4cffa889d485b722e3845b02946e8707a03981b6c856db29d2c18f0d85e5d71  $INDEX" | sha256sum -c -
+          cat > ../release-key.pem <<'PUBLIC'
+          -----BEGIN PUBLIC KEY-----
+          MCowBQYDK2VwAyEAY1j/7NpCtoVsoQBaSkp4X92et2UIzeKkP4Y3snYerLE=
+          -----END PUBLIC KEY-----
+          PUBLIC
+          openssl pkeyutl -verify -pubin -inkey ../release-key.pem -rawin -in "$INDEX" -sigfile "$INDEX.sig"
+          while read -r checksum file; do
+            case "$file" in
+              LKCT-Node-v1.2-r2-Android-arm64.apk) url="$DOWNLOADS/nodes/$file" ;;
+              LKCT-Wallet-*) url="$DOWNLOADS/$file" ;;
+              *) exit 1 ;;
+            esac
+            curl -fsS --retry 4 -o "$file" "$url"
+          done < "$INDEX"
+          sha256sum -c "$INDEX"
+      - name: Publish verified builds
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > notes.md <<'NOTES'
+          LKCT Wallet v1.2-rc5 is available for Windows x64, Linux x86_64 and Android ARM64. In Settings → Network and node, choose **Download and install node v1.2** to install the signed local node for your platform. Node hosting is optional. Protocol v17 is scheduled at block 100,000.
+          
+          On Android, install the update matching the original wallet signing track (R7/R8/R8a or September 22) over your existing wallet. When installing the optional node from the wallet, confirm the Android installer. The node add-on has its own package.
+          
+          [Downloads and Android update selection](https://lajkto.eu/lkct/download.html#wallet-rc5) · [Standalone Linux and Windows node for pool operators](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/releases/tag/v1.2-operator-r2)
+          NOTES
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --draft --prerelease --target "$GITHUB_SHA" --title 'LKCT Wallet v1.2-rc5' --notes-file notes.md
+          fi
+          mkdir verified
+          for asset in assets/*; do
+            name=$(basename "$asset")
+            if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fxq "$name"; then
+              gh release download "$TAG" --pattern "$name" --dir verified
+              cmp "$asset" "verified/$name"
+            else
+              gh release upload "$TAG" "$asset"
+            fi
+          done
+          gh release edit "$TAG" --draft=false --prerelease --latest=false
