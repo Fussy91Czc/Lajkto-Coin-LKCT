@@ -17,7 +17,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       TAG: v1.2-wallet-rc5
       DOWNLOADS: https://lajkto.eu/lkct/downloads
-      INDEX: LKCT-Wallet-v1.2-rc5-SHA256SUMS.txt
+      INDEX: LKCT-Wallet-v1.2-rc5-SHA256SUMS-2.txt
     steps:
       - name: Verify the founder signature and each artifact
         shell: bash
@@ -27,7 +27,7 @@ jobs:
           cd assets
           curl -fsS --retry 4 -O "$DOWNLOADS/$INDEX"
           curl -fsS --retry 4 -O "$DOWNLOADS/$INDEX.sig"
-          echo "f4cffa889d485b722e3845b02946e8707a03981b6c856db29d2c18f0d85e5d71  $INDEX" | sha256sum -c -
+          echo "fd0b4868a542e966624ec0bf4513e14722fadb8e26156693701dbd82a94b1325  $INDEX" | sha256sum -c -
           cat > ../release-key.pem <<'PUBLIC'
           -----BEGIN PUBLIC KEY-----
           MCowBQYDK2VwAyEAY1j/7NpCtoVsoQBaSkp4X92et2UIzeKkP4Y3snYerLE=
@@ -50,6 +50,8 @@ jobs:
           cat > notes.md <<'NOTES'
           LKCT Wallet v1.2-rc5 is available for Windows x64, Linux x86_64 and Android ARM64. In Settings → Network and node, choose **Download and install node v1.2** to install the signed local node for your platform. Node hosting is optional. Protocol v17 is scheduled at block 100,000.
           
+          [Windows x64 ZIP · current package](https://lajkto.eu/lkct/downloads/LKCT-Wallet-Windows-x64-v1.2-rc5-pack2.zip) includes revised Czech and English instructions. Both Windows ZIPs contain identical application binaries. The current signed checksum list is `LKCT-Wallet-v1.2-rc5-SHA256SUMS-2.txt` with its `.sig` file.
+          
           On Android, install the update matching the original wallet signing track (R7/R8/R8a or September 22) over your existing wallet. When installing the optional node from the wallet, confirm the Android installer. The node add-on has its own package.
           
           [Downloads and Android update selection](https://lajkto.eu/lkct/download.html#wallet-rc5) · [Standalone Linux and Windows node for pool operators](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/releases/tag/v1.2-operator-r2)
@@ -67,4 +69,4 @@ jobs:
               gh release upload "$TAG" "$asset"
             fi
           done
-          gh release edit "$TAG" --draft=false --prerelease --latest=false
+          gh release edit "$TAG" --draft=false --prerelease --latest=false --notes-file notes.md
