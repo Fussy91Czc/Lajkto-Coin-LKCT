@@ -1,0 +1,54 @@
+name: Publish signed LKCT v1.2 operator candidate
+on:
+  push:
+    branches: [operator-release/v1.2-r2]
+    paths: [.github/workflows/lkct-operator-r2.yml]
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    timeout-minutes: 8
+    env:
+      GH_REPO: Fussy91Czc/Lajkto-Coin-LKCT
+      PACKAGE: LKCT-v1.2-RC-a8f39fef5-Linux-x86_64-r2-signed.zip
+      ZIP_SHA: eeb3eb28cebfc2230b31bd095edfd557e5bfe04b54e5726f0e47c43f70d01a93
+      SPKI_SHA: d15136fe5b1165bb8742ff22fea0090f021acd0dbcd412e5092b70b4228690d6
+      TAG: v1.2-operator-r2
+    steps:
+      - name: Verify the distributed ZIP and founder-signed archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 --proto '=https' --output "$PACKAGE" "https://lajkto.eu/lkct/downloads/$PACKAGE"
+          printf '%s  %s\n' "$ZIP_SHA" "$PACKAGE" | sha256sum --check --strict
+          mkdir verification
+          cd verification
+          unzip -q "../$PACKAGE"
+          openssl pkey -pubin -in release-public.pem -outform DER -out key.der
+          printf '%s  key.der\n' "$SPKI_SHA" | sha256sum --check --strict
+          openssl pkeyutl -verify -pubin -inkey release-public.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig
+          sha256sum --check --strict SHA256SUMS
+      - name: Publish the verified identical package as a prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            test "$(gh release view "$TAG" --json isPrerelease --jq '.isPrerelease')" = true
+            mkdir existing
+            gh release download "$TAG" --pattern "$PACKAGE" --dir existing
+            cmp -- "$PACKAGE" "existing/$PACKAGE"
+            exit 0
+          fi
+          cat > notes.md <<'RELEASE'
+          Signed Linux x86_64 operator candidate for LKCT mainnet protocol v17, scheduled at block **100,000**. Build **0.18.5.1-a8f39fef5** includes the daemon, CLI wallet and wallet RPC. Test on a separate node with a separate data directory.
+          
+          The ZIP SHA-256 is `eeb3eb28cebfc2230b31bd095edfd557e5bfe04b54e5726f0e47c43f70d01a93`. Verify the signature over `SHA256SUMS` with your existing LKCT release public key, then verify the inner archive. The archive SHA-256 is `1a66342849ec6b906d1696f30f810649bc98e48acd002af16246ec46d78868c4`.
+          
+          [Operator instructions and project mirror](https://lajkto.eu/lkct/developers.html#operator-v12-r2)
+          RELEASE
+          gh release create "$TAG" "$PACKAGE" --target "$GITHUB_SHA" --prerelease --latest=false --title 'LKCT v1.2 operator candidate r2' --notes-file notes.md
