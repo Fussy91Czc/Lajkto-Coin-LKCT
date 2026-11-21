@@ -25,7 +25,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          trap 'printf "Verification failed at line %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
+          set -E
+          trap 'echo "Verification failed at line $LINENO: $BASH_COMMAND" >&2' ERR
           git init -q
           git fetch -q --depth=1 "https://github.com/$GH_REPO.git" "$GITHUB_SHA"
           test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
@@ -43,49 +44,10 @@ jobs:
             local apk="$1" expected="$2"
             "$build_tools/apksigner" verify --verbose --print-certs --min-sdk-version 26 "$apk" > signer.txt
             cat signer.txt
-            grep -Eq '^Verified using v2 scheme.*: true[[:space:]]*
+            grep -Eq '^Verified using v2 scheme.*: true[[:space:]]*$' signer.txt
             test "$(sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p' signer.txt)" = "$expected"
             "$build_tools/aapt" dump badging "$apk" > badging.txt
             sed -n '1p; /^native-code:/p' badging.txt
-            grep -Fq "package: name='eu.lajkto.lkctwallet' versionCode='17' versionName='1.2-rc4'" badging.txt
-            grep -Fq "'arm64-v8a'" badging.txt
-          }
-          check_android "$TRACK_R7" 1b3d41701d48947aa30fd6a95e691bb71146189b5a8f2ab48f684e75e50f071b
-          check_android "$TRACK_SEPTEMBER" 990ff433d9abbc0b4a519ff924b23a40d493a8dc93f93e668696b96975e4ace1
-      - name: Publish the verified packages as a prerelease
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh api "repos/$GH_REPO/releases?per_page=100" > releases.json
-          release_id="$(jq -r --arg tag "$TAG" '.[] | select(.tag_name == $tag) | .id' releases.json)"
-          if [[ -z "$release_id" ]]; then
-            gh release create "$TAG" --target "$GITHUB_SHA" --draft --prerelease --latest=false --title 'LKCT Wallet for Android 1.2-rc4' --notes-file notes.md
-            gh api "repos/$GH_REPO/releases?per_page=100" > releases.json
-            release_id="$(jq -er --arg tag "$TAG" '.[] | select(.tag_name == $tag) | .id' releases.json)"
-          fi
-          gh api "repos/$GH_REPO/releases/$release_id" > release.json
-          jq -e --arg commit "$GITHUB_SHA" '.prerelease and .target_commitish == $commit' release.json >/dev/null
-          draft="$(jq -r .draft release.json)"
-          for asset in "$TRACK_R7" "$TRACK_SEPTEMBER" "$CHECKSUMS"; do
-            gh api "repos/$GH_REPO/releases/$release_id/assets?per_page=100" > assets.json
-            id="$(jq -r --arg name "$asset" '.[] | select(.name == $name) | .id' assets.json)"
-            if [[ -z "$id" ]]; then
-              test "$draft" = true
-              curl --fail --silent --show-error --header "Authorization: Bearer $GH_TOKEN" --header 'Content-Type: application/octet-stream' --data-binary "@$asset" "https://uploads.github.com/repos/$GH_REPO/releases/$release_id/assets?name=$asset" > uploaded.json
-              id="$(jq -er .id uploaded.json)"
-            fi
-            gh api -H 'Accept: application/octet-stream' "repos/$GH_REPO/releases/assets/$id" > mirror-copy
-            cmp "$asset" mirror-copy
-          done
-          if [[ "$draft" == true ]]; then
-            gh api --method PATCH "repos/$GH_REPO/releases/$release_id" -F draft=false -F prerelease=true -f make_latest=false > release.json
-          fi
-          jq -e '.prerelease and (.draft | not)' release.json >/dev/null
- signer.txt
-            test "$(sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p' signer.txt)" = "$expected"
-            "$build_tools/aapt" dump badging "$apk" > badging.txt
             grep -Fq "package: name='eu.lajkto.lkctwallet' versionCode='17' versionName='1.2-rc4'" badging.txt
             grep -Fq "'arm64-v8a'" badging.txt
           }
