@@ -1,0 +1,49 @@
+name: Release signed Windows x64 operator r2
+on:
+  push:
+    branches: [operator-release/v1.2-r2]
+    paths: [.github/workflows/lkct-operator-r2-windows.yml]
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_REPO: Fussy91Czc/Lajkto-Coin-LKCT
+      TAG: v1.2-operator-r2
+      FILE: LKCT-v1.2-RC-a8f39fef5-Windows-x64-r2-signed.zip
+      SHA: 58eb6b8ae0a7c02276297449d3d2226730c95e5359e7255b7f1aeced78ac86e6
+    steps:
+      - name: Verify the mirrored ZIP and founder signature
+        run: |
+          set -eu
+          curl -fSsL --retry 3 --proto '=https' "https://lajkto.eu/lkct/downloads/$FILE" -o "$FILE"
+          echo "$SHA  $FILE" | sha256sum -c -
+          mkdir checked
+          cd checked
+          unzip -q "../$FILE"
+          openssl pkey -pubin -in release-public.pem -outform DER -out key.der
+          echo "d15136fe5b1165bb8742ff22fea0090f021acd0dbcd412e5092b70b4228690d6  key.der" | sha256sum -c -
+          openssl pkeyutl -verify -pubin -inkey release-public.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig
+          sha256sum -c --strict SHA256SUMS
+      - name: Add Windows to the operator release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          test "$(gh release view "$TAG" --json isPrerelease --jq '.isPrerelease')" = true
+          if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fxq "$FILE"; then
+            mkdir existing
+            gh release download "$TAG" -p "$FILE" -D existing
+            cmp "$FILE" "existing/$FILE"
+          else
+            gh release upload "$TAG" "$FILE"
+          fi
+          gh release view "$TAG" --json body --jq .body > notes.md
+          if ! grep -Fq "$FILE" notes.md; then
+            printf '\n### Windows x64\n\nThe native Windows build includes the daemon, CLI wallet and wallet RPC from the same operator source revision, a8f39fef5. Mainnet v17 is scheduled at block 100,000. Download the [signed Windows package](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/releases/download/%s/%s). SHA-256: `%s`.\n' "$TAG" "$FILE" "$SHA" >> notes.md
+            gh release edit "$TAG" --notes-file notes.md
+          fi
