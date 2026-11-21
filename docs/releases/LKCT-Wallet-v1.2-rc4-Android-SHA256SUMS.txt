@@ -1,0 +1,2 @@
+15463dbaa9620e3a179fcd9717c87ad894b8790cee4b7d7e8f220330b2491118  LKCT-Wallet-v1.2-rc4-Android-arm64-from-R7-R8-R8a.apk
+97749ee809ab777cde88b25abb349357be743b4b5ef82fd595a579767a627615  LKCT-Wallet-v1.2-rc4-Android-arm64-from-20260922.apk
