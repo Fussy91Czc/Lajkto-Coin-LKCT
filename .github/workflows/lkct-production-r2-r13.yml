@@ -74,7 +74,7 @@ jobs:
           signer=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)
           test -n "$signer"
           "$signer" verify --print-certs "wallet/$apk" | tee apk-certificate.txt
-          grep -Eq '^(Signer #1|V3\.0 Signer):? certificate SHA-256 digest: 1b3d41701d48947aa30fd6a95e691bb71146189b5a8f2ab48f684e75e50f071b
+          grep -Fq 'certificate SHA-256 digest: 1b3d41701d48947aa30fd6a95e691bb71146189b5a8f2ab48f684e75e50f071b' apk-certificate.txt
           cat > node-notes.md <<'NOTES'
           # LKCT v1.2 r2 — Production node
           Official mainnet deployment: 24 November 2026. Node version 0.18.5.1-a8f39fef5. Protocol v17 activates at block **100,000**.
