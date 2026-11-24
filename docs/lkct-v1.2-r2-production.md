@@ -25,6 +25,12 @@ In a compatible LKCT Wallet, open **Settings → Network & node → Download and
 
 The signed revision-12002 feeds are available for [Windows x64](https://lajkto.eu/lkct/downloads/nodes/windows-x64.json), [Linux x64](https://lajkto.eu/lkct/downloads/nodes/linux-x64.json), [Debian 11 legacy x64](https://lajkto.eu/lkct/downloads/nodes/linux-legacy-x64.json) and [Android ARM64](https://lajkto.eu/lkct/downloads/nodes/android-arm64.json). All four manifest signatures and published payload hashes were checked on 24 November 2026. The Linux production binary and wallet-managed Windows binary reported the expected release version and activation height. Android physical-device hosting remains unverified.
 
+## Independent pool operation
+
+Use the [PPLNS/SOLO starter kit](../pool-r2/README.md) ([Czech](../pool-r2/README.cs.md), [German](../pool-r2/README.de.md)) for a separate pool wallet, PostgreSQL, Miningcore configuration and RandomX mining. The [downloadable kit](https://lajkto.eu/lkct/downloads/LKCT-Pool-v1.2-r2-Starter-Kit.zip) starts locally with payments disabled. It is not a copy of the private production backend.
+
+See the [current wallet downloads](../README.md#wallet-downloads) to select the compatible wallet signing track.
+
 ## Release evidence and limits
 
 Internal engineering review completed: dynamic PoW and isolated mainnet-parameter replay at blocks 99,999–100,001, 220,228 monetary-policy checks, 100,000 legacy subsidy comparisons, LMDB and staking maturity/withdrawal/reorganization tests. This is internal test evidence, not independent certification or a guarantee of financial returns. The 200-million LKCT staking reward reserve limits new reward commitments. The 0.75-LKCT security subsidy begins only after the original mining allocation is exhausted.

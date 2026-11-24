@@ -4,7 +4,7 @@ This repository is a **reviewed public transparency snapshot**, not the complete
 
 ## Included
 
-Public material is limited to code and documentation useful for independently inspecting LKCT's blockchain identity and consensus monetary policy.
+Public material includes selected code and documentation for inspecting LKCT's blockchain identity and monetary policy, signed public distribution links, and a credential-free operator starter kit. The selected consensus source is a historical snapshot, not the complete r2 source tree.
 
 At the time of this snapshot, that includes:
 
@@ -13,6 +13,8 @@ At the time of this snapshot, that includes:
 - genesis monetary-policy self-test
 - monetary-policy audit tooling
 - required upstream copyright and license notices
+- production release notes and public installation guides
+- selected Miningcore compatibility changes and sanitized example configuration in `pool-r2/`
 
 ## Intentionally excluded
 
@@ -23,7 +25,7 @@ The following categories are not part of this public snapshot:
 - unreleased wallet product experiments
 - internal roadmap and master-plan documents
 - private deployment and production runbooks
-- pool backend internals
+- private pool backend internals and actual production configuration
 - private APIs and infrastructure configuration
 - credentials, keys, tokens and RPC secrets
 - unreleased commercial or experimental service-layer code

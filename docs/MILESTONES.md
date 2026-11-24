@@ -22,15 +22,19 @@ Official project timeline. **Dates are project-reported and subject to source ve
 | 2026-10-25 | French VeinPool contacted | Project chronology |
 | 2026-10-31 | LKCT activity on French VeinPool | Project chronology |
 | 2026-11-01 | Windows R11 RC with batch payments | Release candidate, not stable |
+| 2026-11-21/22 | Signed r2 operator packages and RC5 wallet distribution | [GitHub Releases](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/releases) |
+| 2026-11-24 | Official mainnet upgraded to v1.2 r2 | [Production release](lkct-v1.2-r2-production.md); activation at block 100,000 remains pending |
+| 2026-11-24 | Android R13 first signing track published | Official website; second signing track pending |
+| 2026-11-24 | Public PPLNS/SOLO independent pool starter kit | [Configuration and setup](../pool-r2/README.md); fresh-host deployment not yet verified |
 
 ### Milestones awaiting an exact date
 
 - MinerGate: reported appearance of LKCT on its website. **Exact URL and date require verification.**
 - Outreach to additional wallet providers requesting LKCT support. **Request does not mean accepted integration.**
 
-## Wallet downloads
+## Historical wallet downloads (archive)
 
-These links point to **existing LKCT-hosted artifacts**, not GitHub-hosted binaries. GitHub Releases should eventually contain the same independently verifiable packages and SHA-256 files; no binary has been uploaded to GitHub by this document.
+For current wallet versions and compatible node installation, use the [current downloads table](../README.md#wallet-downloads). The older packages below are retained as a historical record, not recommended current versions. GitHub Releases now contains signed operator archives and RC5 wallet packages.
 
 | Platform | Release | Package | SHA-256 file |
 | --- | --- | --- | --- |

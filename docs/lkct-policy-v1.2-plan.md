@@ -2,7 +2,9 @@
 
 Proposal date: 17 November 2026
 
-Status: in development; not activated
+> **Historical proposal (17–20 November 2026).** The text below records the preparation-stage plan, not the current production status. On 24 November 2026 the official r2 node was deployed; activation remains block 100,000. External operator readiness has not been established, but VeinPool approval is not a release dependency. See the [current production release](lkct-v1.2-r2-production.md) and [pool setup kit](../pool-r2/README.md).
+
+Original proposal status: in development; not activated
 
 We are preparing a coordinated LKCT update. Its goals are faster difficulty adjustment when mining power changes, voluntary fixed-term staking, and long-term miner rewards. LKCT will continue to use its own blockchain, Proof of Work and RandomX. The target block interval remains 60 seconds. The update is intended to preserve the existing chain and its history, without launching a new blockchain.
 
