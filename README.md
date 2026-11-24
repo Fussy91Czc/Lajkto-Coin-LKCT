@@ -63,13 +63,17 @@ The current LKCT consensus constants represented by this snapshot are:
 
 The source files in this repository are the authoritative basis for the implementation details of this published snapshot.
 
-## Planned v1.2 update — not active
+## LKCT v1.2 r2 — production node released, protocol activation pending
 
-A coordinated update is being prepared for faster difficulty adjustment, voluntary fixed-term staking and a permanent security reward after exhaustion of the original mining allocation. **Block 100,000 is the committed activation height.** The calendar date depends on block production. Node and pool operators should install the final compatible release before that height once it is published.
+On 24 November 2026 the official mainnet node was upgraded to `0.18.5.1-a8f39fef5`. Install the compatible node before the committed activation at block **100,000**. Staking is not active before that block; the permanent security subsidy starts only after exhaustion of the original mining allocation.
 
-[Read the full English plan: what changes, why, timing and pool coordination](docs/lkct-policy-v1.2-plan.md).
+- [Production release, verification and wallet-managed installation](docs/lkct-v1.2-r2-production.md)
+- [Signed Windows and Linux operator packages](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/releases/tag/v1.2-operator-r2)
+- [Official downloads](https://lajkto.eu/lkct/download.html#operator-node)
 
-The 100-million supply limit and absence of tail emission listed above describe the current published consensus. The proposed additional staking reserve and subsequent security emission are **not active**. Implementation, audits, distribution lead time and VeinPool compatibility must be completed or confirmed before deployment.
+Compatible wallets offer signed node installation in Settings → Network & node, followed by node hosting. Other operators' upgrade readiness is not guaranteed. The release does not require VeinPool approval. Internal engineering tests have passed; this is not independent certification.
+
+The historical monetary-policy snapshot above describes the pre-activation rules. See the [v1.2 plan](docs/lkct-policy-v1.2-plan.md) for the original proposal and the production release document for current status.
 
 ## Publication boundary
 
