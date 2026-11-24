@@ -1,0 +1,27 @@
+{
+  "lkct": {
+    "name": "Lajkto Coin Technology",
+    "canonicalName": "Lajkto Coin Technology",
+    "symbol": "LKCT",
+    "family": "cryptonote",
+    "website": "https://lajkto.eu/lkct/",
+    "market": "",
+    "twitter": "",
+    "telegram": "",
+    "discord": "",
+    "hash": "randomx",
+    "hashVariant": 0,
+    "smallestUnit": 100000000,
+    "addressPrefix": 118,
+    "addressPrefixStagenet": 124,
+    "addressPrefixTestnet": 121,
+    "addressPrefixIntegrated": 119,
+    "addressPrefixIntegratedStagenet": 125,
+    "addressPrefixIntegratedTestnet": 122,
+    "subAddressPrefix": 120,
+    "subAddressPrefixTestnet": 123,
+    "subAddressPrefixStagenet": 126,
+    "explorerBlockLink": "https://lajkto.eu/lkct/",
+    "explorerTxLink": "https://lajkto.eu/lkct/"
+  }
+}

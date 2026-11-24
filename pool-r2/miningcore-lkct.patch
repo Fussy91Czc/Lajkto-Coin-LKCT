@@ -1,0 +1,216 @@
+diff --git a/src/Miningcore/Blockchain/Cryptonote/Configuration/CryptonotePoolPaymentProcessingConfigExtra.cs b/src/Miningcore/Blockchain/Cryptonote/Configuration/CryptonotePoolPaymentProcessingConfigExtra.cs
+index 9c7a52a3..eb4c82d1 100644
+--- a/src/Miningcore/Blockchain/Cryptonote/Configuration/CryptonotePoolPaymentProcessingConfigExtra.cs
++++ b/src/Miningcore/Blockchain/Cryptonote/Configuration/CryptonotePoolPaymentProcessingConfigExtra.cs
+@@ -3,4 +3,16 @@ namespace Miningcore.Blockchain.Cryptonote.Configuration;
+ public class CryptonotePoolPaymentProcessingConfigExtra
+ {
+     public decimal MinimumPaymentToPaymentId { get; set; }
++
++    /// <summary>
++    /// Minimum number of connected daemon peers required before payouts are sent.
++    /// Defaults to the historical Miningcore safety threshold of 3.
++    /// </summary>
++    public int MinimumPayoutPeers { get; set; } = 3;
++
++    /// <summary>
++    /// Persist payments even when the destination is also configured as a reward recipient.
++    /// Useful when the pool-fee address is intentionally also used as a miner address.
++    /// </summary>
++    public bool RecordRewardRecipientPayments { get; set; }
+ }
+diff --git a/src/Miningcore/Blockchain/Cryptonote/CryptonoteJob.cs b/src/Miningcore/Blockchain/Cryptonote/CryptonoteJob.cs
+index cfb505ad..e31053b2 100644
+--- a/src/Miningcore/Blockchain/Cryptonote/CryptonoteJob.cs
++++ b/src/Miningcore/Blockchain/Cryptonote/CryptonoteJob.cs
+@@ -91,10 +91,19 @@ public class CryptonoteJob
+         var bytes = quotient.ToByteArray().AsSpan();
+         Span<byte> padded = stackalloc byte[32];
+ 
+-        var padLength = padded.Length - bytes.Length;
++        // BouncyCastle returns a signed big-endian representation and may
++        // prepend a single zero sign byte for positive 256-bit values.
++        // Miningcore previously copied only when padLength > 0, which left
++        // an all-zero target for valid 32-byte targets (for example LKCT
++        // low starting difficulties 1..100).
++        if(bytes.Length == padded.Length + 1 && bytes[0] == 0)
++            bytes = bytes[1..];
++
++        if(bytes.Length > padded.Length)
++            throw new InvalidOperationException("cryptonote target exceeds 256 bits");
+ 
+-        if(padLength > 0)
+-            bytes.CopyTo(padded.Slice(padLength, bytes.Length));
++        var padLength = padded.Length - bytes.Length;
++        bytes.CopyTo(padded.Slice(padLength, bytes.Length));
+ 
+         padded = padded[..size];
+         padded.Reverse();
+diff --git a/src/Miningcore/Blockchain/Cryptonote/CryptonotePayoutHandler.cs b/src/Miningcore/Blockchain/Cryptonote/CryptonotePayoutHandler.cs
+index f3cc1105..d4c6421c 100644
+--- a/src/Miningcore/Blockchain/Cryptonote/CryptonotePayoutHandler.cs
++++ b/src/Miningcore/Blockchain/Cryptonote/CryptonotePayoutHandler.cs
+@@ -66,7 +66,7 @@ public class CryptonotePayoutHandler : PayoutHandlerBase,
+ 
+             logger.Info(() => $"[{LogCategory}] Payment transaction id: {txHash}, TxFee {FormatAmount(txFee)}, TxKey {response.Response.TxKey}");
+ 
+-            await PersistPaymentsAsync(balances, txHash);
++            await PersistPaymentsAsync(balances, txHash, extraConfig?.RecordRewardRecipientPayments ?? false);
+             NotifyPayoutSuccess(poolConfig.Id, balances, new[] { txHash }, txFee);
+             return true;
+         }
+@@ -91,7 +91,7 @@ public class CryptonotePayoutHandler : PayoutHandlerBase,
+ 
+             logger.Info(() => $"[{LogCategory}] Split-Payment transaction ids: {string.Join(", ", txHashes)}, Corresponding TxFees were {string.Join(", ", txFees.Select(FormatAmount))}");
+ 
+-            await PersistPaymentsAsync(balances, txHashes.First());
++            await PersistPaymentsAsync(balances, txHashes.First(), extraConfig?.RecordRewardRecipientPayments ?? false);
+             NotifyPayoutSuccess(poolConfig.Id, balances, txHashes, txFees.Sum());
+             return true;
+         }
+@@ -166,6 +166,49 @@ public class CryptonotePayoutHandler : PayoutHandlerBase,
+     {
+         var coin = poolConfig.Template.As<CryptonoteCoinTemplate>();
+ 
++        // LKCT can accumulate hundreds of unlocked coinbase outputs very quickly on a
++        // young chain. Trying to spend the whole balance in one transaction may exceed
++        // wallet/core transaction construction limits even when transfer_split is used.
++        // Drain large LKCT balances in deterministic chunks and persist each successful
++        // chunk separately. If a later chunk fails, only the already-broadcast chunks
++        // are deducted and the remainder stays payable on the next run.
++        const decimal lkctMaxChunk = 500m;
++        if(string.Equals(coin.Symbol, "LKCT", StringComparison.OrdinalIgnoreCase) &&
++            balances.Any(x => x.Amount > lkctMaxChunk))
++        {
++            foreach(var balance in balances.Where(x => x.Amount > 0))
++            {
++                var remaining = balance.Amount;
++
++                while(remaining > 0)
++                {
++                    var chunkAmount = Math.Min(remaining, lkctMaxChunk);
++                    var chunk = new Balance
++                    {
++                        PoolId = balance.PoolId,
++                        Address = balance.Address,
++                        Amount = chunkAmount,
++                        Created = balance.Created,
++                        Updated = balance.Updated
++                    };
++
++                    logger.Info(() => $"[{LogCategory}] LKCT chunked payout: {FormatAmount(chunkAmount)} of {FormatAmount(remaining)} remaining for {balance.Address}");
++
++                    if(!await PayoutBatchCore(new[] { chunk }, coin, ct))
++                        return false;
++
++                    remaining -= chunkAmount;
++                }
++            }
++
++            return true;
++        }
++
++        return await PayoutBatchCore(balances, coin, ct);
++    }
++
++    private async Task<bool> PayoutBatchCore(Balance[] balances, CryptonoteCoinTemplate coin, CancellationToken ct)
++    {
+         // ensure there's enough balance
+         if(!await EnsureBalance(balances.Sum(x => x.Amount), coin, ct))
+             return false;
+@@ -197,18 +240,17 @@ public class CryptonotePayoutHandler : PayoutHandlerBase,
+         // send command
+         var transferResponse = await rpcClientWallet.ExecuteAsync<TransferResponse>(logger, CryptonoteWalletCommands.Transfer, ct, request);
+ 
+-        // gracefully handle error -4 (transaction would be too large. try /transfer_split)
+-        if(transferResponse.Error?.Code == -4)
++        // LKCT/Monero-family wallets may report an oversized/impossible transaction
++        // as -4, -18 or -16 depending on wallet/core version. In all three cases
++        // transfer_split is the safe wallet-native fallback for fragmented coinbase inputs.
++        if(transferResponse.Error?.Code is -4 or -18 or -16)
+         {
+-            if(walletSupportsTransferSplit)
+-            {
+-                logger.Error(() => $"[{LogCategory}] Daemon command '{CryptonoteWalletCommands.Transfer}' returned error: {transferResponse.Error.Message} code {transferResponse.Error.Code}");
+-                logger.Info(() => $"[{LogCategory}] Retrying transfer using {CryptonoteWalletCommands.TransferSplit}");
++            logger.Error(() => $"[{LogCategory}] Daemon command '{CryptonoteWalletCommands.Transfer}' returned error: {transferResponse.Error.Message} code {transferResponse.Error.Code}");
++            logger.Info(() => $"[{LogCategory}] Retrying transfer using {CryptonoteWalletCommands.TransferSplit}");
+ 
+-                var transferSplitResponse = await rpcClientWallet.ExecuteAsync<TransferSplitResponse>(logger, CryptonoteWalletCommands.TransferSplit, ct, request);
++            var transferSplitResponse = await rpcClientWallet.ExecuteAsync<TransferSplitResponse>(logger, CryptonoteWalletCommands.TransferSplit, ct, request);
+ 
+-                return await HandleTransferResponseAsync(transferSplitResponse, balances);
+-            }
++            return await HandleTransferResponseAsync(transferSplitResponse, balances);
+         }
+ 
+         return await HandleTransferResponseAsync(transferResponse, balances);
+@@ -274,15 +316,12 @@ public class CryptonotePayoutHandler : PayoutHandlerBase,
+         // send command
+         var result = await rpcClientWallet.ExecuteAsync<TransferResponse>(logger, CryptonoteWalletCommands.Transfer, ct, request);
+ 
+-        if(walletSupportsTransferSplit)
++        // Same wallet-family fallback for payment-id/integrated payouts.
++        if(result.Error?.Code is -4 or -18 or -16)
+         {
+-            // gracefully handle error -4 (transaction would be too large. try /transfer_split)
+-            if(result.Error?.Code == -4)
+-            {
+-                logger.Info(() => $"[{LogCategory}] Retrying transfer using {CryptonoteWalletCommands.TransferSplit}");
++            logger.Info(() => $"[{LogCategory}] Retrying transfer using {CryptonoteWalletCommands.TransferSplit}");
+ 
+-                result = await rpcClientWallet.ExecuteAsync<TransferResponse>(logger, CryptonoteWalletCommands.TransferSplit, ct, request);
+-            }
++            result = await rpcClientWallet.ExecuteAsync<TransferResponse>(logger, CryptonoteWalletCommands.TransferSplit, ct, request);
+         }
+ 
+         return await HandleTransferResponseAsync(result, balance);
+@@ -434,10 +473,11 @@ public class CryptonotePayoutHandler : PayoutHandlerBase,
+ 
+ #if !DEBUG // ensure we have peers
+             var infoResponse = await rpcClient.ExecuteAsync<GetInfoResponse>(logger, CNC.GetInfo, ct);
++            var minimumPayoutPeers = Math.Max(1, extraConfig?.MinimumPayoutPeers ?? 3);
+             if (infoResponse.Error != null || infoResponse.Response == null ||
+-                infoResponse.Response.IncomingConnectionsCount + infoResponse.Response.OutgoingConnectionsCount < 3)
++                infoResponse.Response.IncomingConnectionsCount + infoResponse.Response.OutgoingConnectionsCount < minimumPayoutPeers)
+             {
+-                logger.Warn(() => $"[{LogCategory}] Payout aborted. Not enough peers (4 required)");
++                logger.Warn(() => $"[{LogCategory}] Payout aborted. Not enough peers ({minimumPayoutPeers} required)");
+                 return;
+             }
+ #endif
+diff --git a/src/Miningcore/Payments/PayoutHandlerBase.cs b/src/Miningcore/Payments/PayoutHandlerBase.cs
+index 0a81710b..8ed89abf 100644
+--- a/src/Miningcore/Payments/PayoutHandlerBase.cs
++++ b/src/Miningcore/Payments/PayoutHandlerBase.cs
+@@ -105,7 +105,7 @@ public abstract class PayoutHandlerBase
+         return blockRewardRemaining;
+     }
+ 
+-    protected async Task PersistPaymentsAsync(Balance[] balances, string transactionConfirmation)
++    protected async Task PersistPaymentsAsync(Balance[] balances, string transactionConfirmation, bool recordRewardRecipients = false)
+     {
+         Contract.RequiresNonNull(balances);
+         Contract.Requires<ArgumentException>(!string.IsNullOrEmpty(transactionConfirmation));
+@@ -120,7 +120,8 @@ public abstract class PayoutHandlerBase
+                 {
+                     foreach(var balance in balances)
+                     {
+-                        if(!string.IsNullOrEmpty(transactionConfirmation) && poolConfig.RewardRecipients.All(x => x.Address != balance.Address))
++                        if(!string.IsNullOrEmpty(transactionConfirmation) &&
++                            (recordRewardRecipients || poolConfig.RewardRecipients.All(x => x.Address != balance.Address)))
+                         {
+                             // record payment
+                             var payment = new Payment
+diff --git a/src/Native/libcryptonote/contrib/epee/include/serialization/keyvalue_serialization_overloads.h b/src/Native/libcryptonote/contrib/epee/include/serialization/keyvalue_serialization_overloads.h
+index fc8b90a2..98ebc926 100644
+--- a/src/Native/libcryptonote/contrib/epee/include/serialization/keyvalue_serialization_overloads.h
++++ b/src/Native/libcryptonote/contrib/epee/include/serialization/keyvalue_serialization_overloads.h
+@@ -30,6 +30,7 @@
+ #include <list>
+ #include <vector>
+ #include <deque>
++#include <cstdint>
+ #include <boost/mpl/vector.hpp>
+ #include <boost/mpl/contains_fwd.hpp>
+ 

@@ -1,0 +1,149 @@
+{
+  "clusterName": "LKCT independent pool",
+  "coinTemplates": [
+    "lkct-coins.json"
+  ],
+  "logging": {
+    "level": "info",
+    "enableConsoleLog": true,
+    "enableConsoleColors": false,
+    "logFile": "pool.log",
+    "logBaseDirectory": "logs",
+    "perPoolLogFile": true
+  },
+  "banning": {
+    "manager": "Integrated",
+    "banOnJunkReceive": true,
+    "banOnInvalidShares": false
+  },
+  "notifications": {
+    "enabled": false
+  },
+  "statistics": {
+    "updateInterval": 10,
+    "hashrateCalculationWindow": 10
+  },
+  "persistence": {
+    "postgres": {
+      "host": "127.0.0.1",
+      "port": 5432,
+      "user": "lkctpool",
+      "password": "REPLACE_POSTGRES_PASSWORD",
+      "database": "lkctpool"
+    }
+  },
+  "paymentProcessing": {
+    "enabled": false,
+    "interval": 300,
+    "shareRecoveryFile": "recovered-shares.txt"
+  },
+  "api": {
+    "enabled": true,
+    "listenAddress": "127.0.0.1",
+    "port": 14100
+  },
+  "pools": [
+    {
+      "id": "lkct-pplns",
+      "enabled": true,
+      "coin": "lkct",
+      "randomXRealm": "lkct-local",
+      "address": "REPLACE_POOL_MAINNET_ADDRESS",
+      "rewardRecipients": [],
+      "blockRefreshInterval": 500,
+      "clientConnectionTimeout": 600,
+      "banning": {
+        "enabled": true,
+        "time": 600,
+        "invalidPercent": 50,
+        "checkThreshold": 50
+      },
+      "ports": {
+        "4450": {
+          "listenAddress": "127.0.0.1",
+          "name": "LKCT RandomX PPLNS",
+          "difficulty": 250,
+          "varDiff": {
+            "minDiff": 100,
+            "targetTime": 15,
+            "retargetTime": 90,
+            "variancePercent": 30
+          }
+        },
+        "4452": {
+          "listenAddress": "127.0.0.1",
+          "name": "LKCT Mobile PPLNS",
+          "difficulty": 100
+        }
+      },
+      "daemons": [
+        {
+          "host": "127.0.0.1",
+          "port": 31781
+        },
+        {
+          "host": "127.0.0.1",
+          "port": 31790,
+          "category": "wallet"
+        }
+      ],
+      "paymentProcessing": {
+        "enabled": false,
+        "minimumPayment": 20,
+        "minimumPayoutPeers": 3,
+        "recordRewardRecipientPayments": false,
+        "payoutScheme": "PPLNS",
+        "payoutSchemeConfig": {
+          "factor": 2.0
+        }
+      }
+    },
+    {
+      "id": "lkct-solo",
+      "enabled": true,
+      "coin": "lkct",
+      "randomXRealm": "lkct-local",
+      "address": "REPLACE_POOL_MAINNET_ADDRESS",
+      "rewardRecipients": [],
+      "blockRefreshInterval": 500,
+      "clientConnectionTimeout": 600,
+      "banning": {
+        "enabled": true,
+        "time": 600,
+        "invalidPercent": 50,
+        "checkThreshold": 50
+      },
+      "ports": {
+        "4451": {
+          "listenAddress": "127.0.0.1",
+          "name": "LKCT RandomX SOLO",
+          "difficulty": 1,
+          "varDiff": {
+            "minDiff": 1,
+            "targetTime": 15,
+            "retargetTime": 90,
+            "variancePercent": 30
+          }
+        }
+      },
+      "daemons": [
+        {
+          "host": "127.0.0.1",
+          "port": 31781
+        },
+        {
+          "host": "127.0.0.1",
+          "port": 31790,
+          "category": "wallet"
+        }
+      ],
+      "paymentProcessing": {
+        "enabled": false,
+        "minimumPayment": 20,
+        "minimumPayoutPeers": 3,
+        "recordRewardRecipientPayments": false,
+        "payoutScheme": "SOLO"
+      }
+    }
+  ]
+}
