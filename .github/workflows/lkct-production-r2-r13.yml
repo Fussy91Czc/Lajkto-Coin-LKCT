@@ -1,0 +1,121 @@
+name: Publish LKCT production r2 and Android R13
+on:
+  push:
+    branches: ['release/v1.2-r2-production-r13']
+    paths: ['.github/workflows/lkct-production-r2-r13.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: lkct-production-r2-r13
+jobs:
+  publish:
+    if: github.repository == 'Fussy91Czc/Lajkto-Coin-LKCT' && github.ref == 'refs/heads/release/v1.2-r2-production-r13'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      DOWNLOADS: https://lajkto.eu/lkct/downloads
+      NODE_TAG: v1.2-operator-r2
+      APK_TAG: v1.2-android-r13
+    steps:
+      - name: Verify and publish unchanged signed artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p original node wallet
+          cat > release-public.pem <<'KEY'
+          -----BEGIN PUBLIC KEY-----
+          MCowBQYDK2VwAyEAY1j/7NpCtoVsoQBaSkp4X92et2UIzeKkP4Y3snYerLE=
+          -----END PUBLIC KEY-----
+          KEY
+          openssl pkey -pubin -in release-public.pem -outform DER | sha256sum | grep -q '^d15136fe5b1165bb8742ff22fea0090f021acd0dbcd412e5092b70b4228690d6 '
+          gh release download "$NODE_TAG" --pattern 'LKCT-v1.2-RC-a8f39fef5-*-r2-signed.zip' --dir original
+          (cd original && sha256sum -c <<'SUMS'
+          eeb3eb28cebfc2230b31bd095edfd557e5bfe04b54e5726f0e47c43f70d01a93  LKCT-v1.2-RC-a8f39fef5-Linux-x86_64-r2-signed.zip
+          58eb6b8ae0a7c02276297449d3d2226730c95e5359e7255b7f1aeced78ac86e6  LKCT-v1.2-RC-a8f39fef5-Windows-x64-r2-signed.zip
+          SUMS
+          )
+          for archive in original/*.zip; do
+            folder=$(mktemp -d)
+            unzip -q "$archive" -d "$folder"
+            openssl pkeyutl -verify -pubin -inkey release-public.pem -rawin -in "$folder/SHA256SUMS" -sigfile "$folder/SHA256SUMS.sig"
+            (cd "$folder" && sha256sum -c SHA256SUMS)
+          done
+          curl -fsS --retry 3 -o node/LKCT-Pool-v1.2-r2-Starter-Kit.zip "$DOWNLOADS/LKCT-Pool-v1.2-r2-Starter-Kit.zip"
+          echo '15f7f85fadbba8907bb6d4086bf14f22798f0a3ac9abc1416378bf863098a945  node/LKCT-Pool-v1.2-r2-Starter-Kit.zip' | sha256sum -c -
+          python3 - <<'PY'
+          import base64, hashlib, json, pathlib, subprocess, tempfile, os
+          folder=pathlib.Path("node")
+          for platform, asset, digest in [
+              ("android-arm64","LKCT-Node-v1.2-r2-Android-arm64.apk","80fd525cb5f32d53e8a4b7a309fe3e83fcd53a352396fbf4c84e4606a26afded"),
+              ("linux-legacy-x64","LKCT-Node-v1.2-r2-Debian11-Legacy-x64.bin","ff1ad000fe46ad727fd9caeb0b45f925b5f2ae6e190965cc034e8d0c02bdc1bf"),
+              ("linux-x64","LKCT-Node-v1.2-r2-Ubuntu22.04-x64.bin","3dcd90f392c1e518957a3ebd61e2c60db1f6c3116bdacb98255a18225bc06c37"),
+              ("windows-x64","LKCT-Node-v1.2-r2-Windows-x64.exe","cec0e97dce14841f92785673d85444f756a10ac8cdb98f8a3fdb652c8f2ddda8")
+          ]:
+              feed=folder/(platform+".json")
+              subprocess.run(["curl","-fsS","--retry","3","-o",str(feed),os.environ["DOWNLOADS"]+"/nodes/"+feed.name],check=True)
+              e=json.loads(feed.read_text())
+              raw=base64.b64decode(e["manifest"],validate=True)
+              sig=base64.b64decode(e["signature"],validate=True)
+              with tempfile.TemporaryDirectory() as td:
+                  p=pathlib.Path(td)
+                  (p/"m").write_bytes(raw); (p/"s").write_bytes(sig)
+                  subprocess.run(["openssl","pkeyutl","-verify","-pubin","-inkey","release-public.pem","-rawin","-in",str(p/"m"),"-sigfile",str(p/"s")],check=True)
+              m=json.loads(raw)
+              assert m["platform"]==platform and m["revision"]==12002 and m["asset"]==asset and m["daemon"]["sha256"]==digest
+              payload=folder/asset
+              subprocess.run(["curl","-fsS","--retry","3","-o",str(payload),os.environ["DOWNLOADS"]+"/nodes/"+asset],check=True)
+              assert payload.stat().st_size==m["size"] and hashlib.sha256(payload.read_bytes()).hexdigest()==digest
+          PY
+          apk=LKCT-Wallet-Android-R13-Update-R7-R8-R8a.apk
+          curl -fsS --retry 3 -o "wallet/$apk" "$DOWNLOADS/$apk"
+          (cd wallet && echo "23f42ad19735225cbde8b178af4f82de718e260a87ba662ee1ca05df0157b98c  $apk" | tee SHA256SUMS-Android-R13.txt | sha256sum -c -)
+          signer=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)
+          test -n "$signer"
+          "$signer" verify --print-certs "wallet/$apk" | tee apk-certificate.txt
+          grep -Fq 'Signer #1 certificate SHA-256 digest: 1b3d41701d48947aa30fd6a95e691bb71146189b5a8f2ab48f684e75e50f071b' apk-certificate.txt
+          cat > node-notes.md <<'NOTES'
+          # LKCT v1.2 r2 — Production node
+          Official mainnet deployment: 24 November 2026. Node version 0.18.5.1-a8f39fef5. Protocol v17 activates at block **100,000**.
+          
+          **CZ:** Produkční uzel r2 běží. Aktivace zůstává na bloku 100 000. Aktualizuj svůj uzel včas.
+          
+          **DE:** Der produktive r2-Node läuft. Aktivierung bei Block 100.000. Aktualisiere deinen Node rechtzeitig.
+          
+          [Verified production documentation](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/blob/main/docs/lkct-v1.2-r2-production.md) · [Wallets and downloads CZ/EN/DE](https://lajkto.eu/lkct/download.html) · [Independent PPLNS/SOLO pool setup](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/tree/main/pool-r2).
+          
+          Original signed archives are unchanged. The additional platform manifests and payloads are for wallet-managed node installation; standalone Windows operators should use the full ZIP with runtime libraries. Debian 11 requires compatible legacy libraries. Android installation requires system confirmation. Pool starter-kit payments are disabled until tested.
+          
+          Internal engineering tests passed, not independent certification. Physical Android hosting, all external upgrades and actual post-fork operation remain unverified.
+          NOTES
+          cat > wallet-notes.md <<'NOTES'
+          # LKCT Wallet R13 for Android — first signing track
+          R13, versionCode 19, for existing R7/R8/R8a signing certificates. Install over the existing app. The original 22 September track remains on RC5. The APK contains background mining and notifications; physical-device tests remain pending.
+          
+          **CZ:** R13 pro podpisovou řadu R7/R8/R8a. Aktualizace bez odinstalace. Zářijová větev zůstává na RC5.
+          
+          **DE:** R13 für die Signaturreihe R7/R8/R8a. Update ohne Deinstallation. Die September-Reihe bleibt bei RC5.
+          
+          [Correct signing track and official downloads](https://lajkto.eu/lkct/download.html#android). Never uninstall the existing wallet to bypass a signature mismatch. Back up recovery information securely.
+          NOTES
+          upload_verified() {
+            local tag="$1" dir="$2" asset name verify
+            verify=$(mktemp -d)
+            for asset in "$dir"/*; do
+              name=$(basename "$asset")
+              if gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$name"; then
+                gh release download "$tag" --pattern "$name" --dir "$verify"
+                cmp "$asset" "$verify/$name"
+              else
+                gh release upload "$tag" "$asset"
+              fi
+            done
+          }
+          upload_verified "$NODE_TAG" node
+          gh release edit "$NODE_TAG" --title 'LKCT v1.2 r2 — Production node' --draft=false --prerelease=false --latest=true --notes-file node-notes.md
+          if ! gh release view "$APK_TAG" >/dev/null 2>&1; then
+            gh release create "$APK_TAG" --draft --prerelease --target "$GITHUB_SHA" --title 'LKCT Wallet R13 for Android · R7/R8/R8a' --notes-file wallet-notes.md
+          fi
+          upload_verified "$APK_TAG" wallet
+          gh release edit "$APK_TAG" --draft=false --prerelease --latest=false --notes-file wallet-notes.md
