@@ -1,0 +1,97 @@
+name: Publish verified LKCT Wallet R15 desktop
+on:
+  push:
+    branches: ['release/v1.2-r2-production-r13']
+    paths: ['.github/workflows/lkct-wallet-r15.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: lkct-wallet-r15
+jobs:
+  publish:
+    if: github.repository == 'Fussy91Czc/Lajkto-Coin-LKCT' && github.ref == 'refs/heads/release/v1.2-r2-production-r13'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: wallet-r15
+      DOWNLOADS: https://lajkto.eu/lkct/downloads
+    steps:
+      - name: Verify and publish existing signed desktop packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir assets verified
+          cat > release-key.pem <<'KEY'
+          -----BEGIN PUBLIC KEY-----
+          MCowBQYDK2VwAyEAY1j/7NpCtoVsoQBaSkp4X92et2UIzeKkP4Y3snYerLE=
+          -----END PUBLIC KEY-----
+          KEY
+          openssl pkey -pubin -in release-key.pem -outform DER | sha256sum | grep -q '^d15136fe5b1165bb8742ff22fea0090f021acd0dbcd412e5092b70b4228690d6 '
+          cd assets
+          for f in LKCT-Wallet-Windows-x64-R15.zip LKCT-Wallet-R15-Ubuntu22.04-amd64.deb LKCT-Wallet-R15-Linux-x86_64.AppImage LKCT-Wallet-R15-Debian11-Legacy-amd64.deb LKCT-Wallet-Linux-Legacy-x86_64-R15.tar.gz LKCT-Wallet-R15-SHA256SUMS.txt LKCT-Wallet-R15-SHA256SUMS.txt.sig latest-windows-r15.json latest-linux-r15.json; do
+            curl -fsS --retry 3 -O "$DOWNLOADS/$f"
+          done
+          echo '5c631532b93f97e965f18b1d15bd8f58110df33d93016551dfe22a94c8587eff  LKCT-Wallet-R15-SHA256SUMS.txt' | sha256sum -c -
+          openssl pkeyutl -verify -pubin -inkey ../release-key.pem -rawin -in LKCT-Wallet-R15-SHA256SUMS.txt -sigfile LKCT-Wallet-R15-SHA256SUMS.txt.sig
+          sha256sum -c LKCT-Wallet-R15-SHA256SUMS.txt
+          for f in *.deb *.AppImage *.tar.gz; do
+            curl -fsS --retry 3 -O "$DOWNLOADS/$f.sig"
+            openssl pkeyutl -verify -pubin -inkey ../release-key.pem -rawin -in "$f" -sigfile "$f.sig"
+          done
+          python3 - <<'PY'
+          import json,pathlib,hashlib,subprocess,base64,zipfile
+          w=json.loads(pathlib.Path('latest-windows-r15.json').read_text())
+          assert w['version']=='R15' and w['revision']==22
+          a=w['windows']
+          p=pathlib.Path('LKCT-Wallet-Windows-x64-R15.zip')
+          assert a['root']=='LKCT-Wallet-Windows-x64-R15' and a['url']=='https://lajkto.eu/lkct/downloads/'+p.name
+          assert a['size']==p.stat().st_size==135094403
+          assert hashlib.sha256(p.read_bytes()).hexdigest()==a['sha256']=='0f917d8f832ef499c44ca6ea4978ab2fb5dc71522c3c5fcba2e1f8c22da3de48'
+          message='LKCT-WINDOWS-UPDATE-V1\nrevision=22\nversion=R15\nurl='+a['url']+'\nsha256='+a['sha256']+'\nroot='+a['root']+'\nsize='+str(a['size'])+'\n'
+          pathlib.Path('../message').write_text(message)
+          pathlib.Path('../signature').write_bytes(base64.b64decode(a['signature_ed25519'],validate=True))
+          subprocess.run(['openssl','pkeyutl','-verify','-pubin','-inkey','../release-key.pem','-rawin','-in','../message','-sigfile','../signature'],check=True)
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              assert hashlib.sha256(z.read(a['root']+'/lajkto-wallet.exe')).hexdigest()=='953f4521b368acf9a11f517414507848e28b672c76c6cb7b3a8fb5990baa2c67'
+          m=json.loads(pathlib.Path('latest-linux-r15.json').read_text())
+          assert m['version']=='R15' and m['revision']==22
+          assert set(m['linux'])=={'deb','appimage','legacy_debian11','legacy_tar','hotfixes'}
+          for track,v in m['linux'].items():
+              if track=='hotfixes': continue
+              f=pathlib.Path(v['url'].split('/')[-1])
+              assert v['url']=='https://lajkto.eu/lkct/downloads/'+f.name
+              assert f.stat().st_size==v['size'] and hashlib.sha256(f.read_bytes()).hexdigest()==v['sha256']
+          PY
+          cd ..
+          cat > notes.md <<'NOTES'
+          # LKCT Wallet R15 | Windows and Linux
+          Revision 22. Reopening a wallet now preserves the encrypted cache rather than forcing a scan from genesis. Checkpoints run every 30 seconds on all platforms; a failed save is reported and normal closure is prevented.
+          
+          **CZ:** R15 opravuje opakované skenování od nuly. Zachovej původní peněženku i její .keys a cache. Ubuntu 22.04+ včetně MATE používá standardní DEB; Debian 11 má samostatný Legacy DEB nebo TAR.GZ.
+          
+          **EN:** Use the standard DEB for Ubuntu 22.04+; Debian 11 has a separate Legacy build. AppImage and Legacy TAR.GZ are available for portable use.
+          
+          **DE:** R15 setzt die Synchronisierung am gespeicherten Stand fort. Behalte Wallet, .keys und Cache. Standard-DEB für Ubuntu 22.04+, Legacy-DEB oder TAR.GZ für Debian 11.
+          
+          Mainnet regression tests passed on Windows, Ubuntu 22.04 and Debian 11: three reopenings preserved saved height 76714, including an induced save failure. Linux packaged runtime and signed node-bundle smoke tests passed in the two isolated systems; the portable artifacts reported R15. No test on a colleague's physical computer is claimed.
+          
+          The signed update feeds and SHA-256 index use the original LKCT Ed25519 release key. Windows binaries are not Authenticode-signed. Android R15 is not yet released. The blockchain node remains v1.2 r2 with protocol v17 activation at block 100000.
+          
+          [Official downloads in CZ / EN / DE](https://lajkto.eu/lkct/download.html) · [Production node](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/releases/tag/v1.2-operator-r2)
+          NOTES
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --draft --target "$GITHUB_SHA" --title 'LKCT Wallet R15 · Windows / Linux' --notes-file notes.md
+          fi
+          for f in assets/*; do
+            name=$(basename "$f")
+            if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fxq "$name"; then
+              gh release download "$TAG" --pattern "$name" --dir verified
+              cmp "$f" "verified/$name"
+            else
+              gh release upload "$TAG" "$f"
+            fi
+          done
+          gh release edit "$TAG" --draft=false --prerelease=false --latest=false --notes-file notes.md
