@@ -74,7 +74,52 @@ jobs:
           signer=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)
           test -n "$signer"
           "$signer" verify --print-certs "wallet/$apk" | tee apk-certificate.txt
-          grep -Fq 'Signer #1 certificate SHA-256 digest: 1b3d41701d48947aa30fd6a95e691bb71146189b5a8f2ab48f684e75e50f071b' apk-certificate.txt
+          grep -Eq '^(Signer #1|V3\.0 Signer):? certificate SHA-256 digest: 1b3d41701d48947aa30fd6a95e691bb71146189b5a8f2ab48f684e75e50f071b
+          cat > node-notes.md <<'NOTES'
+          # LKCT v1.2 r2 — Production node
+          Official mainnet deployment: 24 November 2026. Node version 0.18.5.1-a8f39fef5. Protocol v17 activates at block **100,000**.
+          
+          **CZ:** Produkční uzel r2 běží. Aktivace zůstává na bloku 100 000. Aktualizuj svůj uzel včas.
+          
+          **DE:** Der produktive r2-Node läuft. Aktivierung bei Block 100.000. Aktualisiere deinen Node rechtzeitig.
+          
+          [Verified production documentation](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/blob/main/docs/lkct-v1.2-r2-production.md) · [Wallets and downloads CZ/EN/DE](https://lajkto.eu/lkct/download.html) · [Independent PPLNS/SOLO pool setup](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/tree/main/pool-r2).
+          
+          Original signed archives are unchanged. The additional platform manifests and payloads are for wallet-managed node installation; standalone Windows operators should use the full ZIP with runtime libraries. Debian 11 requires compatible legacy libraries. Android installation requires system confirmation. Pool starter-kit payments are disabled until tested.
+          
+          Internal engineering tests passed, not independent certification. Physical Android hosting, all external upgrades and actual post-fork operation remain unverified.
+          NOTES
+          cat > wallet-notes.md <<'NOTES'
+          # LKCT Wallet R13 for Android — first signing track
+          R13, versionCode 19, for existing R7/R8/R8a signing certificates. Install over the existing app. The original 22 September track remains on RC5. The APK contains background mining and notifications; physical-device tests remain pending.
+          
+          **CZ:** R13 pro podpisovou řadu R7/R8/R8a. Aktualizace bez odinstalace. Zářijová větev zůstává na RC5.
+          
+          **DE:** R13 für die Signaturreihe R7/R8/R8a. Update ohne Deinstallation. Die September-Reihe bleibt bei RC5.
+          
+          [Correct signing track and official downloads](https://lajkto.eu/lkct/download.html#android). Never uninstall the existing wallet to bypass a signature mismatch. Back up recovery information securely.
+          NOTES
+          upload_verified() {
+            local tag="$1" dir="$2" asset name verify
+            verify=$(mktemp -d)
+            for asset in "$dir"/*; do
+              name=$(basename "$asset")
+              if gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$name"; then
+                gh release download "$tag" --pattern "$name" --dir "$verify"
+                cmp "$asset" "$verify/$name"
+              else
+                gh release upload "$tag" "$asset"
+              fi
+            done
+          }
+          upload_verified "$NODE_TAG" node
+          gh release edit "$NODE_TAG" --title 'LKCT v1.2 r2 — Production node' --draft=false --prerelease=false --latest=true --notes-file node-notes.md
+          if ! gh release view "$APK_TAG" >/dev/null 2>&1; then
+            gh release create "$APK_TAG" --draft --prerelease --target "$GITHUB_SHA" --title 'LKCT Wallet R13 for Android · R7/R8/R8a' --notes-file wallet-notes.md
+          fi
+          upload_verified "$APK_TAG" wallet
+          gh release edit "$APK_TAG" --draft=false --prerelease --latest=false --notes-file wallet-notes.md
+ apk-certificate.txt
           cat > node-notes.md <<'NOTES'
           # LKCT v1.2 r2 — Production node
           Official mainnet deployment: 24 November 2026. Node version 0.18.5.1-a8f39fef5. Protocol v17 activates at block **100,000**.
