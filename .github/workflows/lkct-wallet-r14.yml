@@ -1,0 +1,85 @@
+name: Publish Windows Wallet R14
+on:
+  push:
+    branches: ['release/v1.2-r2-production-r13']
+    paths: ['.github/workflows/lkct-wallet-r14.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: lkct-wallet-r14
+jobs:
+  publish:
+    if: github.repository == 'Fussy91Czc/Lajkto-Coin-LKCT' && github.ref == 'refs/heads/release/v1.2-r2-production-r13'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: wallet-r14
+      DOWNLOADS: https://lajkto.eu/lkct/downloads
+    steps:
+      - name: Verify and publish signed R14 package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir assets
+          cd assets
+          for f in LKCT-Wallet-Windows-x64-R14.zip LKCT-Wallet-Windows-R14-SHA256SUMS.txt LKCT-Wallet-Windows-R14-SHA256SUMS.txt.sig latest-windows-r14.json; do
+            curl -fsS --retry 3 -O "$DOWNLOADS/$f"
+          done
+          cat > ../release-key.pem <<'PUBLIC'
+          -----BEGIN PUBLIC KEY-----
+          MCowBQYDK2VwAyEAY1j/7NpCtoVsoQBaSkp4X92et2UIzeKkP4Y3snYerLE=
+          -----END PUBLIC KEY-----
+          PUBLIC
+          openssl pkey -pubin -in ../release-key.pem -outform DER | sha256sum | grep -q '^d15136fe5b1165bb8742ff22fea0090f021acd0dbcd412e5092b70b4228690d6 '
+          openssl pkeyutl -verify -pubin -inkey ../release-key.pem -rawin -in LKCT-Wallet-Windows-R14-SHA256SUMS.txt -sigfile LKCT-Wallet-Windows-R14-SHA256SUMS.txt.sig
+          sha256sum -c LKCT-Wallet-Windows-R14-SHA256SUMS.txt
+          echo '148db6f763b3a5562598440b0d77241e0fd6b8765d49078d22f367ee9f90ab8b  LKCT-Wallet-Windows-x64-R14.zip' | sha256sum -c -
+          python3 - <<'PY'
+          import json, pathlib, base64, subprocess, zipfile, hashlib
+          d=json.loads(pathlib.Path('latest-windows-r14.json').read_text())
+          w=d['windows']
+          assert d['revision']==21 and d['version']=='R14'
+          assert w['root']=='LKCT-Wallet-Windows-x64-R14'
+          p=pathlib.Path('LKCT-Wallet-Windows-x64-R14.zip')
+          assert w['url']=='https://lajkto.eu/lkct/downloads/'+p.name
+          assert p.stat().st_size==w['size']==135090660
+          assert hashlib.sha256(p.read_bytes()).hexdigest()==w['sha256']
+          msg="LKCT-WINDOWS-UPDATE-V1\nrevision=21\nversion=R14\nurl="+w['url']+"\nsha256="+w['sha256']+"\nroot="+w['root']+"\nsize="+str(w['size'])+"\n"
+          pathlib.Path('../message').write_text(msg)
+          pathlib.Path('../sig').write_bytes(base64.b64decode(w['signature_ed25519'],validate=True))
+          subprocess.run(['openssl','pkeyutl','-verify','-pubin','-inkey','../release-key.pem','-rawin','-in','../message','-sigfile','../sig'],check=True)
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              assert hashlib.sha256(z.read(w['root']+'/lajkto-wallet.exe')).hexdigest()=='a73cb87e5e559b6a5cdff8513cc92b79b71681a6dd2f1f957c5cfe91c7737aba'
+          PY
+          cd ..
+          cat > notes.md <<'NOTES'
+          # LKCT Wallet R14 — Windows x64
+          **Revision 21 · 24 November 2026.** Windows release with consistent R14 version labels and revised staking status, including a same-node read-only RPC fallback and localized Czech messages. The Windows packaged UI and signed node-bundle smoke tests passed. The staking UI tests passed 16/16. No live staking transaction was submitted as part of this release.
+          
+          **CZ:** Windows R14 opravuje označení peněženky a zobrazení stavu stakingu. Aktivace v17 zůstává na bloku 100 000.
+          
+          **DE:** Windows R14 vereinheitlicht die Wallet-Version und korrigiert die Staking-Statusanzeige. Protokoll v17 wird bei Block 100.000 aktiviert.
+          
+          Update the existing wallet without deleting your recovery information. The release index and update manifest use the existing LKCT Ed25519 release key. The bundled Windows application is not Authenticode-signed.
+          
+          The blockchain node remains LKCT v1.2 r2. Linux remains RC5; Android R14 is not yet released. See the official download page for current platform versions.
+          
+          [Downloads CZ / EN / DE](https://lajkto.eu/lkct/download.html) · [Production node](https://github.com/Fussy91Czc/Lajkto-Coin-LKCT/releases/tag/v1.2-operator-r2)
+          NOTES
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --draft --target "$GITHUB_SHA" --title 'LKCT Wallet R14 · Windows x64' --notes-file notes.md
+          fi
+          mkdir verified
+          for f in assets/*; do
+            name=$(basename "$f")
+            if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fxq "$name"; then
+              gh release download "$TAG" --pattern "$name" --dir verified
+              cmp "$f" "verified/$name"
+            else
+              gh release upload "$TAG" "$f"
+            fi
+          done
+          gh release edit "$TAG" --draft=false --prerelease=false --latest=false --notes-file notes.md
